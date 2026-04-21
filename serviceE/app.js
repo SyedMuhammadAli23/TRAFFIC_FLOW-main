@@ -34,7 +34,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/serviceE', (req, res) => {
+app.get('/', (req, res) => {
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   logger.info({ requestId, message: 'Final service response' });
   res.send('Service E completed the chain.');

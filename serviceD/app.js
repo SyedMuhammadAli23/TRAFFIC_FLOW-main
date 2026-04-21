@@ -38,7 +38,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/serviceD', async (req, res) => {
+app.get('/', async (req, res) => {
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   
   try {

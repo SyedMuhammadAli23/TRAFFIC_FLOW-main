@@ -43,7 +43,7 @@ if (missingVars.length > 0) {
   process.exit(1);
 }
 
-app.get('/serviceC', async (req, res) => {
+app.get('/', async (req, res) => {
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   
   try {
