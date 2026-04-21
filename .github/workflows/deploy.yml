@@ -32,6 +32,22 @@ jobs:
           docker build -t ${{ env.ECR_REGISTRY }}/service-a:latest ./serviceA
           docker push ${{ env.ECR_REGISTRY }}/service-a:latest
           
+          # Service B
+          docker build -t ${{ env.ECR_REGISTRY }}/service-b:latest ./serviceB
+          docker push ${{ env.ECR_REGISTRY }}/service-b:latest
+
+          # Service C
+          docker build -t ${{ env.ECR_REGISTRY }}/service-c:latest ./serviceC
+          docker push ${{ env.ECR_REGISTRY }}/service-c:latest
+
+          # Service D
+          docker build -t ${{ env.ECR_REGISTRY }}/service-d:latest ./serviceD
+          docker push ${{ env.ECR_REGISTRY }}/service-d:latest
+
+          # Service E
+          docker build -t ${{ env.ECR_REGISTRY }}/service-e:latest ./serviceE
+          docker push ${{ env.ECR_REGISTRY }}/service-e:latest
+
           # Frontend
           docker build -t ${{ env.ECR_REGISTRY }}/frontend:latest ./frontend
           docker push ${{ env.ECR_REGISTRY }}/frontend:latest
@@ -58,3 +74,4 @@ jobs:
             # 3. Pull new images and restart containers
             docker compose pull
             docker compose up -d
+            docker image prune -f
