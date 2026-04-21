@@ -1,8 +1,5 @@
 services:
   servicea:
-    build:
-      context: ./serviceA
-    # UPDATED: Matches your ECR Repo URI
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-a:latest
     ports:
       - "3001:3001"
@@ -16,12 +13,10 @@ services:
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=admin
-
+      # INTERNAL COMMUNICATION: Service A calls Service B
+      - SERVICE_B_URL=http://serviceb:3002
 
   serviceb:
-    build:
-      context: ./serviceB
-    # UPDATED: Matches your ECR Repo URI
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-b:latest
     ports:
       - "3002:3002"
@@ -35,12 +30,10 @@ services:
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=admin
+      # INTERNAL COMMUNICATION: Service B calls Service C
+      - SERVICE_C_URL=http://servicec:3003
 
-  # ... (Repeat the image naming pattern for Service B, C, D, E)
   servicec:
-    build:
-      context: ./serviceC
-    # UPDATED: Matches your ECR Repo URI
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-c:latest
     ports:
       - "3003:3003"
@@ -54,14 +47,10 @@ services:
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=admin
-
-
-
+      # INTERNAL COMMUNICATION: Service C calls Service D
+      - SERVICE_D_URL=http://serviced:3004
 
   serviced:
-    build:
-      context: ./serviceD
-    # UPDATED: Matches your ECR Repo URI
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-d:latest
     ports:
       - "3004:3004"
@@ -75,13 +64,10 @@ services:
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=admin
-
-
+      # INTERNAL COMMUNICATION: Service D calls Service E
+      - SERVICE_E_URL=http://servicee:3005
 
   servicee:
-    build:
-      context: ./serviceE
-    # UPDATED: Matches your ECR Repo URI
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-e:latest
     ports:
       - "3005:3005"
@@ -95,23 +81,21 @@ services:
       - DB_USER=admin
       - DB_PASS=admin
       - DB_NAME=admin
+
   frontend:
-    build:
-      context: ./frontend
-    # UPDATED: Matches your ECR Repo URI
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/frontend:latest
     ports:
-      - "3000:80"  # ALB talks to 3000 -> Container listens on 80
+      - "3000:80"
     networks:
       - appnet
+    # IMPORTANT: These must match your PUBLIC ALB DNS for the browser to see them
     environment:
-      - REACT_APP_SERVICE_A_URL=http://servicea:3001/serviceA
-      - REACT_APP_SERVICE_B_URL=http://serviceb:3002/serviceB
-      - REACT_APP_SERVICE_C_URL=http://servicec:3003/serviceC
-      - REACT_APP_SERVICE_D_URL=http://serviced:3004/serviceD
-      - REACT_APP_SERVICE_E_URL=http://servicee:3005/serviceE
-
-      # ... (Rest of your envs)
+      - REACT_APP_SERVICE_A_URL=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicea
+      - REACT_APP_SERVICE_A_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicea/health
+      - REACT_APP_SERVICE_B_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/serviceb/health
+      - REACT_APP_SERVICE_C_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicec/health
+      - REACT_APP_SERVICE_D_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/serviced/health
+      - REACT_APP_SERVICE_E_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicee/health
 
   postgres:
     image: postgres:13
@@ -123,8 +107,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - appnet
-    # Note: On EC2, you usually don't need to expose 5432 to the world, 
-    # but keeping it is fine for now.
     ports:
       - "5432:5432"
 
