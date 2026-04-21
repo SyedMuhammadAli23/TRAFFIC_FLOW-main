@@ -1,46 +1,60 @@
-name: CD - Deploy to EC2
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: [ main ]
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 522632170655.dkr.ecr.ap-south-1.amazonaws.com
 
 jobs:
-  deploy:
+  ci-build-push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: SCP docker-compose file to EC2
-        uses: appleboy/scp-action@master
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.yaml"
-          target: "/home/ubuntu/"
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Execute Remote Commands via SSH
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push all Images
+        run: |
+          # Service A
+          docker build -t ${{ env.ECR_REGISTRY }}/service-a:latest ./serviceA
+          docker push ${{ env.ECR_REGISTRY }}/service-a:latest
+          
+          # Frontend
+          docker build -t ${{ env.ECR_REGISTRY }}/frontend:latest ./frontend
+          docker push ${{ env.ECR_REGISTRY }}/frontend:latest
+          
+          # Note: Add Service B, C, D, E lines here following the same pattern
+
+  cd-deploy-to-ec2:
+    needs: ci-build-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Update EC2
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          host: ${{ secrets.HOST_DNS }}
+          username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 1. AWS CLI Configure (Using Secrets)
-            export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-            export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            export AWS_DEFAULT_REGION=ap-south-1
-
-            # 2. ECR Login
-            aws ecr get-login-password --region ap-south-1 | sudo docker login --username AWS --password-stdin 547519647676.dkr.ecr.ap-south-1.amazonaws.com
+            # 1. Login to ECR on the EC2
+            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 522632170655.dkr.ecr.ap-south-1.amazonaws.com
             
+            # 2. Navigate to your project folder
+            cd ~/project
             
-            # 3. Deployment
-            cd /home/ubuntu/
-            sudo docker-compose pull
-            sudo docker-compose up -d
-
-
-            # 4. Cleanup (Faltu images delete karne ke liye)
-            sudo docker system prune -f
+            # 3. Pull new images and restart containers
+            docker compose pull
+            docker compose up -d
