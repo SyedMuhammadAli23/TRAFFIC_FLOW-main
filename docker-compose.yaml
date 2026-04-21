@@ -14,7 +14,7 @@ services:
       - DB_PASS=admin
       - DB_NAME=admin
       # INTERNAL COMMUNICATION: Service A calls Service B
-      - SERVICE_B_URL=http://serviceb:3002/
+      - SERVICE_B_URL=http://serviceb:3002/serviceb
 
   serviceb:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-b:latest
@@ -31,7 +31,7 @@ services:
       - DB_PASS=admin
       - DB_NAME=admin
       # INTERNAL COMMUNICATION: Service B calls Service C
-      - SERVICE_C_URL=http://servicec:3003/
+      - SERVICE_C_URL=http://servicec:3003/servicec
 
   servicec:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-c:latest
@@ -48,7 +48,7 @@ services:
       - DB_PASS=admin
       - DB_NAME=admin
       # INTERNAL COMMUNICATION: Service C calls Service D
-      - SERVICE_D_URL=http://serviced:3004/
+      - SERVICE_D_URL=http://serviced:3004/serviced
 
   serviced:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-d:latest
@@ -65,7 +65,7 @@ services:
       - DB_PASS=admin
       - DB_NAME=admin
       # INTERNAL COMMUNICATION: Service D calls Service E
-      - SERVICE_E_URL=http://servicee:3005/
+      - SERVICE_E_URL=http://servicee:3005/servicee
 
   servicee:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-e:latest
