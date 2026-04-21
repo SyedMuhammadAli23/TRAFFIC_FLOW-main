@@ -43,7 +43,7 @@ if (missingVars.length > 0) {
   process.exit(1);
 }
 
-app.get('/', async (req, res) => {
+app.get('/servicea', async (req, res) => {
   const requestId = `req-${Date.now()}`;
   
   try {
@@ -106,7 +106,7 @@ app.get('/', async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/health', async (req, res) => {
+app.get('/servicea/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ status: 'healthy', service: 'Service A', timestamp: new Date().toISOString() });

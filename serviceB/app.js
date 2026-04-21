@@ -43,7 +43,7 @@ if (missingVars.length > 0) {
   process.exit(1);
 }
 
-app.get('/', async (req, res) => {
+app.get('/serviceb', async (req, res) => {
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   
   try {
@@ -83,7 +83,7 @@ app.get('/', async (req, res) => {
   }
 });
 
-app.get('/health', async (req, res) => {
+app.get('/serviceb/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ status: 'healthy', service: 'Service B' });

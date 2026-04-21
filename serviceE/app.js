@@ -34,13 +34,13 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/', (req, res) => {
+app.get('/servicee', (req, res) => {
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   logger.info({ requestId, message: 'Final service response' });
   res.send('Service E completed the chain.');
 });
 
-app.get('/health', (req, res) => {
+app.get('/servicee/health', (req, res) => {
   res.json({ status: 'healthy', service: 'Service E' });
 });
 

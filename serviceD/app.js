@@ -38,7 +38,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/', async (req, res) => {
+app.get('/serviced', async (req, res) => {
   const requestId = req.headers['x-request-id'] || `req-${Date.now()}`;
   
   try {
@@ -64,7 +64,7 @@ app.get('/', async (req, res) => {
   }
 });
 
-app.get('/health', (req, res) => {
+app.get('/serviced/health', (req, res) => {
   res.json({ status: 'healthy', service: 'Service D' });
 });
 
