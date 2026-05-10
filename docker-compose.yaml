@@ -1,114 +1,117 @@
+version: '3.8'
+
 services:
   servicea:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-a:latest
-    ports:
-      - "3001:3001"
-    networks:
-      - appnet
-    depends_on:
-      - postgres
+    ports: ["3001:3001"]
+    networks: [appnet]
+    depends_on: [postgres]
     environment:
       - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASS=admin
-      - DB_NAME=admin
-      # INTERNAL COMMUNICATION: Service A calls Service B
+      - DB_PASS=${DB_PASSWORD}
       - SERVICE_B_URL=http://serviceb:3002/serviceb
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-group: "traffic-flow-logs"
+        awslogs-region: "ap-south-1"
+        awslogs-stream-prefix: "service-a"
+        
 
   serviceb:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-b:latest
-    ports:
-      - "3002:3002"
-    networks:
-      - appnet
-    depends_on:
-      - postgres
+    ports: ["3002:3002"]
+    networks: [appnet]
+    depends_on: [postgres]
     environment:
       - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASS=admin
-      - DB_NAME=admin
-      # INTERNAL COMMUNICATION: Service B calls Service C
+      - DB_PASS=${DB_PASSWORD}
       - SERVICE_C_URL=http://servicec:3003/servicec
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-group: "traffic-flow-logs"
+        awslogs-region: "ap-south-1"
+        awslogs-stream-prefix: "service-b"
 
   servicec:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-c:latest
-    ports:
-      - "3003:3003"
-    networks:
-      - appnet
-    depends_on:
-      - postgres
+    ports: ["3003:3003"]
+    networks: [appnet]
+    depends_on: [postgres]
     environment:
       - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASS=admin
-      - DB_NAME=admin
-      # INTERNAL COMMUNICATION: Service C calls Service D
+      - DB_PASS=${DB_PASSWORD}
       - SERVICE_D_URL=http://serviced:3004/serviced
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-group: "traffic-flow-logs"
+        awslogs-region: "ap-south-1"
+        awslogs-stream-prefix: "service-c"
 
   serviced:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-d:latest
-    ports:
-      - "3004:3004"
-    networks:
-      - appnet
-    depends_on:
-      - postgres
+    ports: ["3004:3004"]
+    networks: [appnet]
+    depends_on: [postgres]
     environment:
       - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASS=admin
-      - DB_NAME=admin
-      # INTERNAL COMMUNICATION: Service D calls Service E
+      - DB_PASS=${DB_PASSWORD}
       - SERVICE_E_URL=http://servicee:3005/servicee
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-group: "traffic-flow-logs"
+        awslogs-region: "ap-south-1"
+        awslogs-stream-prefix: "service-d"
 
   servicee:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-e:latest
-    ports:
-      - "3005:3005"
-    networks:
-      - appnet
-    depends_on:
-      - postgres
+    ports: ["3005:3005"]
+    networks: [appnet]
+    depends_on: [postgres]
     environment:
       - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASS=admin
-      - DB_NAME=admin
+      - DB_PASS=${DB_PASSWORD}
+      # Service E is the end of the chain, usually only talks to DB
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-group: "traffic-flow-logs"
+        awslogs-region: "ap-south-1"
+        awslogs-stream-prefix: "service-e"
 
   frontend:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/frontend:latest
-    ports:
-      - "3000:80"
-    networks:
-      - appnet
-    # IMPORTANT: These must match your PUBLIC ALB DNS for the browser to see them
+    ports: ["3000:3000"]
+    networks: [appnet]
     environment:
+      # Use your ALB DNS here so the browser can reach the services
       - REACT_APP_SERVICE_A_URL=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicea
-      - REACT_APP_SERVICE_A_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicea/health
-      - REACT_APP_SERVICE_B_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/serviceb/health
-      - REACT_APP_SERVICE_C_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicec/health
-      - REACT_APP_SERVICE_D_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/serviced/health
-      - REACT_APP_SERVICE_E_HEALTH=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicee/health
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-group: "traffic-flow-logs"
+        awslogs-region: "ap-south-1"
+        awslogs-stream-prefix: "frontend"
 
   postgres:
     image: postgres:13
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: admin
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - appnet
-    ports:
-      - "5432:5432"
+    networks: [appnet]
+    ports: ["5432:5432"]
+    logging:
+      driver: "awslogs"
+      options:
+        awslogs-group: "traffic-flow-logs"
+        awslogs-region: "ap-south-1"
+        awslogs-stream-prefix: "postgres"
 
 networks:
   appnet:
@@ -116,6 +119,3 @@ networks:
 
 volumes:
   postgres_data:
-    driver: local
-
-    #force push

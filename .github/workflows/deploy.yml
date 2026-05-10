@@ -1,77 +1,69 @@
-name: CI/CD Pipeline
+name: CI/CD Traffic Flow (OIDC & Multi-Service)
 
 on:
   push:
     branches: [ main ]
+
+permissions:
+  id-token: write   # Required for OIDC
+  contents: read    # Required for checkout
 
 env:
   AWS_REGION: ap-south-1
   ECR_REGISTRY: 522632170655.dkr.ecr.ap-south-1.amazonaws.com
 
 jobs:
-  ci-build-push:
+  ci-build-scan-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
+      # 1. OIDC Handshake (No Access Keys!)
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::522632170655:role/GitHub-OIDC-TrafficFlow-Role
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push all Images
+      # 2. Build & Scan Loop (Doing all 6 images)
+      - name: Build, Scan & Push All Services
         run: |
-          # Service A
-          docker build -t ${{ env.ECR_REGISTRY }}/service-a:latest ./serviceA
-          docker push ${{ env.ECR_REGISTRY }}/service-a:latest
+          SERVICES=("service-a" "service-b" "service-c" "service-d" "service-e" "frontend")
+          DIRS=("./serviceA" "./serviceB" "./serviceC" "./serviceD" "./serviceE" "./frontend")
           
-          # Service B
-          docker build -t ${{ env.ECR_REGISTRY }}/service-b:latest ./serviceB
-          docker push ${{ env.ECR_REGISTRY }}/service-b:latest
-
-          # Service C
-          docker build -t ${{ env.ECR_REGISTRY }}/service-c:latest ./serviceC
-          docker push ${{ env.ECR_REGISTRY }}/service-c:latest
-
-          # Service D
-          docker build -t ${{ env.ECR_REGISTRY }}/service-d:latest ./serviceD
-          docker push ${{ env.ECR_REGISTRY }}/service-d:latest
-
-          # Service E
-          docker build -t ${{ env.ECR_REGISTRY }}/service-e:latest ./serviceE
-          docker push ${{ env.ECR_REGISTRY }}/service-e:latest
-
-          # Frontend
-          docker build -t ${{ env.ECR_REGISTRY }}/frontend:latest ./frontend
-          docker push ${{ env.ECR_REGISTRY }}/frontend:latest
-          
-          # Note: Add Service B, C, D, E lines here following the same pattern
-
-  cd-deploy-to-ec2:
-    needs: ci-build-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: SSH and Update EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.HOST_DNS }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # 1. Login to ECR on the EC2
-            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 522632170655.dkr.ecr.ap-south-1.amazonaws.com
+          for i in "${!SERVICES[@]}"; do
+            REPO_NAME=${SERVICES[$i]}
+            DIR_PATH=${DIRS[$i]}
+            FULL_IMAGE=${{ env.ECR_REGISTRY }}/$REPO_NAME:latest
             
-            # 2. Navigate to your project folder
-            cd ~/project
+            echo "--- Processing $REPO_NAME ---"
             
-            # 3. Pull new images and restart containers
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
+            # Build
+            docker build -t $FULL_IMAGE $DIR_PATH
+            
+            # Trivy Scan (Senior's Requirement)
+            # Fails the pipeline if Critical/High vulnerabilities are found
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:latest image --severity CRITICAL,HIGH --exit-code 1 $FULL_IMAGE
+            
+            # Push
+            docker push $FULL_IMAGE
+          done
+
+      # 3. CD Step: Sync the blueprint to SSM
+      # This replaces the "SSH Action". The EC2 pulls this file automatically.
+      - name: Update SSM Docker Compose Blueprint
+        run: |
+          aws ssm put-parameter \
+            --name "/traffic-flow/config/docker-compose" \
+            --value "$(cat docker-compose.yml)" \
+            --type "String" \
+            --overwrite
+
+  # Note: In a production ASG setup, you might trigger an Instance Refresh here 
+  # to make the EC2s pull the new images immediately.
