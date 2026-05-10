@@ -15,7 +15,7 @@ services:
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
-        awslogs-stream-prefix: "service-a"
+        tag: "service-a"
         
 
   serviceb:
@@ -32,7 +32,7 @@ services:
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
-        awslogs-stream-prefix: "service-b"
+        tag: "service-b"
 
   servicec:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-c:latest
@@ -48,7 +48,7 @@ services:
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
-        awslogs-stream-prefix: "service-c"
+        tag: "service-c"
 
   serviced:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-d:latest
@@ -64,7 +64,7 @@ services:
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
-        awslogs-stream-prefix: "service-d"
+        tag: "service-d"
 
   servicee:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/service-e:latest
@@ -80,11 +80,11 @@ services:
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
-        awslogs-stream-prefix: "service-e"
+        tag: "service-e"
 
   frontend:
     image: 522632170655.dkr.ecr.ap-south-1.amazonaws.com/frontend:latest
-    ports: ["3000:3000"]
+    ports: ["3000:80"]
     networks: [appnet]
     environment:
       # Use your ALB DNS here so the browser can reach the services
@@ -94,7 +94,7 @@ services:
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
-        awslogs-stream-prefix: "frontend"
+        tag: "frontend"
 
   postgres:
     image: postgres:13
@@ -111,7 +111,7 @@ services:
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
-        awslogs-stream-prefix: "postgres"
+        tag: "postgres"
 
 networks:
   appnet:
