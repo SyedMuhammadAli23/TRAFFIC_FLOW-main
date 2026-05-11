@@ -45,10 +45,13 @@ jobs:
 
       - name: Update SSM Docker Compose Blueprint
         run: |
-          # Replaces the config in SSM so new instances get the latest YAML
+          # Safety check: List files to the log so we can verify the path
+          ls -R 
+          
+          # Use the correct .yaml extension
           aws ssm put-parameter \
             --name "/traffic-flow/config/docker-compose" \
-            --value "$(cat docker-compose.yml)" \
+            --value "$(cat docker-compose.yaml)" \
             --type "String" \
             --overwrite
 
