@@ -12,7 +12,7 @@ env:
   AWS_REGION: ap-south-1
   ECR_REGISTRY: 522632170655.dkr.ecr.ap-south-1.amazonaws.com
   # --- STEP 1: Put your actual ASG name here ---
-  ASG_NAME: Traffic-Flow-ASG 
+  ASG_NAME: traffic-flow-asg 
 
 jobs:
   ci-build-scan-push:
