@@ -40,6 +40,13 @@ jobs:
             DIR_PATH=${DIRS[$i]}
             FULL_IMAGE=${{ env.ECR_REGISTRY }}/$REPO_NAME:latest
             docker build -t $FULL_IMAGE $DIR_PATH
+            # 2. Trivy Scan (Security Requirement)
+            # We set --exit-code 0 so it reports but doesn't fail the build yet, 
+            # OR set --exit-code 1 if you want to force security compliance.
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:latest image --severity CRITICAL --exit-code 0 $FULL_IMAGE
+            
+            # 3. Push to ECR
             docker push $FULL_IMAGE
           done
 
