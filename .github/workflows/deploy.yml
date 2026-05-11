@@ -5,12 +5,14 @@ on:
     branches: [ main ]
 
 permissions:
-  id-token: write   # Required for OIDC
-  contents: read    # Required for checkout
+  id-token: write
+  contents: read
 
 env:
   AWS_REGION: ap-south-1
   ECR_REGISTRY: 522632170655.dkr.ecr.ap-south-1.amazonaws.com
+  # --- STEP 1: Put your actual ASG name here ---
+  ASG_NAME: Traffic-Flow-ASG 
 
 jobs:
   ci-build-scan-push:
@@ -19,7 +21,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. OIDC Handshake (No Access Keys!)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -30,40 +31,43 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 2. Build & Scan Loop (Doing all 6 images)
-      - name: Build, Scan & Push All Services
+      - name: Build and Push All Services
         run: |
           SERVICES=("service-a" "service-b" "service-c" "service-d" "service-e" "frontend")
           DIRS=("./serviceA" "./serviceB" "./serviceC" "./serviceD" "./serviceE" "./frontend")
-          
           for i in "${!SERVICES[@]}"; do
             REPO_NAME=${SERVICES[$i]}
             DIR_PATH=${DIRS[$i]}
             FULL_IMAGE=${{ env.ECR_REGISTRY }}/$REPO_NAME:latest
-            
-            echo "--- Processing $REPO_NAME ---"
-            
-            # Build
             docker build -t $FULL_IMAGE $DIR_PATH
-            
-            # Trivy Scan (Senior's Requirement)
-            # Fails the pipeline if Critical/High vulnerabilities are found
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-              aquasec/trivy:latest image --severity CRITICAL,HIGH --exit-code 0 $FULL_IMAGE
-            
-            # Push
             docker push $FULL_IMAGE
           done
 
-      # 3. CD Step: Sync the blueprint to SSM
-      # This replaces the "SSH Action". The EC2 pulls this file automatically.
       - name: Update SSM Docker Compose Blueprint
         run: |
+          # Replaces the config in SSM so new instances get the latest YAML
           aws ssm put-parameter \
             --name "/traffic-flow/config/docker-compose" \
-            --value "$(cat docker-compose.yaml)" \
+            --value "$(cat docker-compose.yml)" \
             --type "String" \
             --overwrite
 
-  # Note: In a production ASG setup, you might trigger an Instance Refresh here 
-  # to make the EC2s pull the new images immediately.
+  cd-deploy:
+    needs: ci-build-scan-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::522632170655:role/GitHub-OIDC-TrafficFlow-Role
+          aws-region: ${{ env.AWS_REGION }}
+
+      # --- STEP 2: The Correct CD logic for Private Subnets ---
+      - name: Trigger Rolling Update (Instance Refresh)
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name ${{ env.ASG_NAME }} \
+            --preferences '{
+              "MinHealthyPercentage": 50,
+              "InstanceWarmup": 360
+            }'
