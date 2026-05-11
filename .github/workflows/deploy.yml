@@ -54,7 +54,6 @@ jobs:
             --value "$(cat docker-compose.yaml)" \
             --type "String" \
             --overwrite
-
   cd-deploy:
     needs: ci-build-scan-push
     runs-on: ubuntu-latest
@@ -65,12 +64,9 @@ jobs:
           role-to-assume: arn:aws:iam::522632170655:role/GitHub-OIDC-TrafficFlow-Role
           aws-region: ${{ env.AWS_REGION }}
 
-      # --- STEP 2: The Correct CD logic for Private Subnets ---
       - name: Trigger Rolling Update (Instance Refresh)
         run: |
+          # Use the GITHUB env variable syntax here
           aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name ${{ env.ASG_NAME }} \
-            --preferences '{
-              "MinHealthyPercentage": 50,
-              "InstanceWarmup": 360
-            }'
+            --auto-scaling-group-name "${{ env.ASG_NAME }}" \
+            --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 360}'
