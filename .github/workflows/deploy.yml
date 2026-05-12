@@ -8,7 +8,6 @@ permissions:
   id-token: write
   contents: read
 
-# Global ENV (Logic that doesn't change between environments)
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   ECR_REGISTRY: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com"
@@ -16,7 +15,6 @@ env:
 jobs:
   ci-build-scan-push:
     runs-on: ubuntu-latest
-    # We add this so CI can see the Variables/Secrets too
     environment: production 
     steps:
       - name: Checkout Code
