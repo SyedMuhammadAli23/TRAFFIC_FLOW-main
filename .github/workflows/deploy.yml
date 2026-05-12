@@ -8,15 +8,16 @@ permissions:
   id-token: write
   contents: read
 
+# Global ENV (Logic that doesn't change between environments)
 env:
-  AWS_REGION: ap-south-1
-  ECR_REGISTRY: 522632170655.dkr.ecr.ap-south-1.amazonaws.com
-  # --- STEP 1: Put your actual ASG name here ---
-  ASG_NAME: traffic-flow-asg 
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REGISTRY: "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com"
 
 jobs:
   ci-build-scan-push:
     runs-on: ubuntu-latest
+    # We add this so CI can see the Variables/Secrets too
+    environment: production 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -24,14 +25,14 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::522632170655:role/GitHub-OIDC-TrafficFlow-Role
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE_NAME }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push All Services
+      - name: Build, Scan & Push All Services
         run: |
           SERVICES=("service-a" "service-b" "service-c" "service-d" "service-e" "frontend")
           DIRS=("./serviceA" "./serviceB" "./serviceC" "./serviceD" "./serviceE" "./frontend")
@@ -40,40 +41,32 @@ jobs:
             DIR_PATH=${DIRS[$i]}
             FULL_IMAGE=${{ env.ECR_REGISTRY }}/$REPO_NAME:latest
             docker build -t $FULL_IMAGE $DIR_PATH
-            # 2. Trivy Scan (Security Requirement)
-            # We set --exit-code 0 so it reports but doesn't fail the build yet, 
-            # OR set --exit-code 1 if you want to force security compliance.
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
               aquasec/trivy:latest image --severity CRITICAL --exit-code 0 $FULL_IMAGE
-            
-            # 3. Push to ECR
             docker push $FULL_IMAGE
           done
 
       - name: Update SSM Docker Compose Blueprint
         run: |
-          # Safety check: List files to the log so we can verify the path
-          ls -R 
-          
-          # Use the correct .yaml extension
           aws ssm put-parameter \
             --name "/traffic-flow/config/docker-compose" \
             --value "$(cat docker-compose.yaml)" \
             --type "String" \
             --overwrite
+
   cd-deploy:
     needs: ci-build-scan-push
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::522632170655:role/GitHub-OIDC-TrafficFlow-Role
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE_NAME }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Trigger Rolling Update (Instance Refresh)
         run: |
-          # Use the GITHUB env variable syntax here
           aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name "${{ env.ASG_NAME }}" \
+            --auto-scaling-group-name "${{ vars.ASG_NAME }}" \
             --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 360}'

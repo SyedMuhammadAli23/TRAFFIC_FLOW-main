@@ -74,7 +74,6 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PASS=${DB_PASSWORD}
-      # Service E is the end of the chain, usually only talks to DB
     logging:
       driver: "awslogs"
       options:
@@ -87,7 +86,6 @@ services:
     ports: ["3000:80"]
     networks: [appnet]
     environment:
-      # Use your ALB DNS here so the browser can reach the services
       - REACT_APP_SERVICE_A_URL=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicea
     logging:
       driver: "awslogs"
