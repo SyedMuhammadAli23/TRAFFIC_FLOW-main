@@ -50,6 +50,7 @@ jobs:
             --name "/traffic-flow/config/docker-compose" \
             --value "$(cat docker-compose.yaml)" \
             --type "String" \
+            --tier "Advanced" \
             --overwrite
 
   cd-deploy:
