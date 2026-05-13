@@ -113,7 +113,7 @@ services:
 
   # --- Monitoring Stack Additions ---
 
-  cadvisor:
+cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     ports: ["8080:8080"]
@@ -125,36 +125,39 @@ services:
     networks: [appnet]
     restart: unless-stopped
 
-  prometheus:
+prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     ports: ["9090:9090"]
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
-    # Limit storage to save space on t3.micro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=7d'
-      - '--web.external-url=http://localhost:9090/prometheus/'
+      # Changed external URL to root for simpler ALB mapping
+      - '--web.external-url=/' 
       - '--web.route-prefix=/'
     networks: [appnet]
     depends_on: [cadvisor]
     restart: unless-stopped
 
-  loki:
+loki:
     image: grafana/loki:latest
     container_name: loki
     ports: ["3100:3100"]
+    # Added explicit config to ensure it responds to /ready
+    command: -config.file=/etc/loki/local-config.yaml
     networks: [appnet]
     restart: unless-stopped
 
-  grafana:
+grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports: ["4000:3000"]
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${DB_PASSWORD}
+      # This ensures Grafana knows it's being accessed via the /grafana path
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
