@@ -69,3 +69,8 @@ jobs:
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "${{ vars.ASG_NAME }}" \
             --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 360}'
+
+
+
+
+            #force push 1
