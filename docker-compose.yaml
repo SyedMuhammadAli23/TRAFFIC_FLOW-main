@@ -86,14 +86,14 @@ services:
     ports: ["3000:80"]
     networks: [appnet]
     environment:
-      - REACT_APP_SERVICE_A_URL=http://alb-1054492390.ap-south-1.elb.amazonaws.com/servicea
+      # Add http:// back to the beginning
+      - REACT_APP_SERVICE_A_URL=http://my-traffic-flow-alb-968910792.ap-south-1.elb.amazonaws.com/servicea
     logging:
       driver: "awslogs"
       options:
         awslogs-group: "traffic-flow-logs"
         awslogs-region: "ap-south-1"
         tag: "frontend"
-
   postgres:
     image: postgres:13
     environment:
@@ -133,8 +133,8 @@ services:
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.retention.time=7d'
-      - '--web.external-url=/' 
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.external-url=http://my-traffic-flow-alb-968910792.ap-south-1.elb.amazonaws.com/prometheus/'
       - '--web.route-prefix=/'
     networks: [appnet]
     depends_on: [cadvisor]
@@ -154,6 +154,7 @@ services:
     ports: ["4000:3000"]
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${DB_PASSWORD}
+      - GF_SERVER_DOMAIN=my-traffic-flow-alb-968910792.ap-south-1.elb.amazonaws.com
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
