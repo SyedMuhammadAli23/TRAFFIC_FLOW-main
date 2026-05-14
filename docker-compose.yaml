@@ -135,7 +135,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.external-url=http://my-traffic-flow-alb-968910792.ap-south-1.elb.amazonaws.com/prometheus/'
-      - '--web.route-prefix=/'
+      - '--web.route-prefix=/prometheus'
     networks: [appnet]
     depends_on: [cadvisor]
     restart: unless-stopped
